@@ -920,6 +920,19 @@ def test_toggle():
     repr(at.toggle[0])
 
 
+def test_file_uploader():
+    def script():
+        import streamlit as st
+
+        file = st.file_uploader("upload")
+        st.write(file.name if file else "none")
+
+    at = AppTest.from_function(script).run()
+    assert at.file_uploader[0].value is None
+    at.file_uploader[0].upload_from_bytes("foo.txt", b"hello").run()
+    assert at.text[0].value == "foo.txt"
+
+
 def test_short_timeout():
     script = AppTest.from_string(
         """
