@@ -100,6 +100,27 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
 
 Our vibrant creators community also extends Streamlit capabilities using  🧩 [Streamlit Components](https://streamlit.io/components).
 
+## Testing Streamlit apps
+
+You can programmatically drive Streamlit apps in your tests using
+``st.testing.v1.AppTest``. This makes it easy to simulate user interactions
+with widgets and assert against the resulting output.
+
+```python
+from streamlit.testing.v1 import AppTest
+
+def test_simple_app():
+    def app():
+        import streamlit as st
+
+        name = st.text_input("Name")
+        st.write("Hello", name)
+
+    at = AppTest.from_function(app).run()
+    at.text_input[0].set_value("World").run()
+    assert at.markdown[0].value == "Hello World"
+```
+
 ## Get inspired
 
 There's so much you can build with Streamlit:

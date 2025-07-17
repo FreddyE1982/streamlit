@@ -312,3 +312,11 @@ experimental_set_query_params = _deprecate_func_name(
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
 import streamlit.components.v1  # noqa: F401
+
+# Public testing interface
+from types import SimpleNamespace as _SimpleNamespace
+import streamlit.testing as _testing
+
+# ``testing`` exposes helpers for writing pytest based tests against
+# Streamlit apps. For now we only expose versioned APIs.
+testing = _SimpleNamespace(v1=_testing.v1)
