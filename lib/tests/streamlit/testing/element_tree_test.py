@@ -831,6 +831,11 @@ def test_text_area():
     assert sr2.text_area[0].value == long_string
     assert sr2.text_area[1].value == "default"
 
+    sr3 = sr2.text_area[0].append("!!").run()
+    assert sr3.text_area[0].value == long_string + "!!"
+    sr4 = sr3.text_area[0].clear().run()
+    assert sr4.text_area[0].value == ""
+
     repr(sr.text_area[0])
 
 
@@ -854,6 +859,11 @@ def test_text_input():
 
     assert sr2.text_input[0].value == long_string
     assert sr2.text_input[1].value == "default"
+
+    sr3 = sr2.text_input[0].append("!!").run()
+    assert sr3.text_input[0].value == long_string + "!!"
+    sr4 = sr3.text_input[0].clear().run()
+    assert sr4.text_input[0].value == ""
 
     repr(sr.text_input[0])
 
