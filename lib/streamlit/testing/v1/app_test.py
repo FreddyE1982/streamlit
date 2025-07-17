@@ -30,6 +30,7 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -170,10 +171,14 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        self._uploaded_file_recs: list[UploadedFileRec] = []
 
         tree = ElementTree()
         tree._runner = self
         self._tree = tree
+
+    def _register_uploaded_file(self, file_rec: UploadedFileRec) -> None:
+        self._uploaded_file_recs.append(file_rec)
 
     @classmethod
     def from_string(cls, script: str, *, default_timeout: float = 3) -> AppTest:
@@ -352,6 +357,9 @@ class AppTest:
             args=self.args,
             kwargs=self.kwargs,
         )
+        for rec in self._uploaded_file_recs:
+            script_runner.uploaded_file_mgr.add_file(script_runner._session_id, rec)
+        self._uploaded_file_recs.clear()
         with patch_config_options({"global.appTest": True}):
             self._tree = script_runner.run(
                 widget_state, self.query_params, timeout, self._page_hash

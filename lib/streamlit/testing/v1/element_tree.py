@@ -34,6 +34,8 @@ from typing import (
 )
 
 from typing_extensions import Self, TypeAlias
+from pathlib import Path
+import uuid
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
@@ -48,6 +50,12 @@ from streamlit.elements.widgets.time_widgets import (
     DateWidgetReturn,
     TimeInputSerde,
     _parse_date_value,
+)
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+    FileUploaderState as FileUploaderStateProto,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -81,6 +89,11 @@ if TYPE_CHECKING:
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
     from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
+    from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
+    from streamlit.proto.Common_pb2 import (
+        FileUploaderState as FileUploaderStateProto,
+        FileURLs as FileURLsProto,
+    )
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
@@ -1370,6 +1383,69 @@ class TimeInput(Widget):
 
 
 @dataclass(repr=False)
+class FileUploader(Widget):
+    """A representation of ``st.file_uploader``."""
+
+    _files: list[UploadedFile] | None
+    proto: FileUploaderProto = field(repr=False)
+    label: str
+    type: list[str]
+    multiple_files: bool
+
+    def __init__(self, proto: FileUploaderProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = None
+        self.type = "file_uploader"
+
+    def set_value(self, files: UploadedFile | Sequence[UploadedFile]) -> "FileUploader":
+        if not isinstance(files, Sequence):
+            files = [files]
+        self._files = list(files)
+        for f in self._files:
+            self.root._runner._register_uploaded_file(
+                UploadedFileRec(f.file_id, f.name, f.type, f.getvalue())
+            )
+        return self
+
+    def upload_from_bytes(
+        self, name: str, data: bytes, mime_type: str = "application/octet-stream"
+    ) -> "FileUploader":
+        file_id = str(uuid.uuid4())
+        rec = UploadedFileRec(file_id, name, mime_type, data)
+        urls = FileURLsProto(file_id=file_id, upload_url="", delete_url="")
+        self.root._runner._register_uploaded_file(rec)
+        uploaded = UploadedFile(rec, urls)
+        return self.set_value(uploaded)
+
+    def upload(self, path: str | Path) -> "FileUploader":
+        data = Path(path).read_bytes()
+        return self.upload_from_bytes(Path(path).name, data)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self._files:
+            fus = FileUploaderStateProto()
+            for f in self._files:
+                info = fus.uploaded_file_info.add()
+                info.file_id = f.file_id
+                info.name = f.name
+                info.size = f.size
+                info.file_urls.file_id = f.file_id
+            ws.file_uploader_state_value.CopyFrom(fus)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | list[UploadedFile] | None:
+        if self._files is not None:
+            return self._files if self.multiple_files else (self._files[0] if self._files else None)
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
+
+
+@dataclass(repr=False)
 class Toast(Element):
     proto: ToastProto = field(repr=False)
     icon: str
@@ -1534,6 +1610,10 @@ class Block:
     @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
+
+    @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
     def header(self) -> ElementList[Header]:
@@ -2024,6 +2104,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = TextInput(elt.text_input, root=root)
             elif ty == "time_input":
                 new_node = TimeInput(elt.time_input, root=root)
+            elif ty == "file_uploader":
+                new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "toast":
                 new_node = Toast(elt.toast, root=root)
             else:

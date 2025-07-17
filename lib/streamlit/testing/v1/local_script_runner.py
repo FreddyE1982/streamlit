@@ -57,11 +57,12 @@ class LocalScriptRunner(ScriptRunner):
         self.args = args if args is not None else ()
         self.kwargs = kwargs if kwargs is not None else {}
 
+        self.uploaded_file_mgr = MemoryUploadedFileManager("/mock/upload")
         super().__init__(
             session_id="test session id",
             main_script_path=script_path,
             session_state=self.session_state._state,
-            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            uploaded_file_mgr=self.uploaded_file_mgr,
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
