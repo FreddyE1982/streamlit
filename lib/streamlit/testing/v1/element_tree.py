@@ -1749,6 +1749,10 @@ class Block:
         return WidgetList(self.get("button_group"))  # type: ignore
 
     @property
+    def rating(self) -> WidgetList[ButtonGroup[Any]]:
+        return WidgetList(self.get("button_group"))  # type: ignore
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))  # type: ignore
 
