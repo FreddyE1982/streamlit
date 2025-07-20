@@ -75,6 +75,7 @@ from streamlit.testing.v1.element_tree import (
     AudioInput,
     CameraInput,
     FileUploader,
+    DownloadButton,
     Table,
     Text,
     TextArea,
@@ -641,6 +642,12 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.divider
+
+    @property
+    def download_button(self) -> WidgetList[DownloadButton]:
+        """Sequence of all ``st.download_button`` widgets."""
+
+        return self._tree.download_button
 
     @property
     def error(self) -> ElementList[Error]:
