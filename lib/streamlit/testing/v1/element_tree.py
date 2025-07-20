@@ -53,6 +53,8 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
+from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
+from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import (
     FileURLs as FileURLsProto,
     FileUploaderState as FileUploaderStateProto,
@@ -90,6 +92,8 @@ if TYPE_CHECKING:
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
     from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
     from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
+    from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
+    from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
     from streamlit.proto.Common_pb2 import (
         FileUploaderState as FileUploaderStateProto,
         FileURLs as FileURLsProto,
@@ -1460,6 +1464,124 @@ class FileUploader(Widget):
 
 
 @dataclass(repr=False)
+class AudioInput(Widget):
+    """A representation of ``st.audio_input``."""
+
+    _file: UploadedFile | None
+    proto: AudioInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: AudioInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._file = None
+        self.type = "audio_input"
+
+    def set_value(self, f: UploadedFile) -> "AudioInput":
+        self._file = f
+        self.root._runner._register_uploaded_file(
+            UploadedFileRec(f.file_id, f.name, f.type, f.getvalue())
+        )
+        return self
+
+    def record_from_bytes(
+        self, name: str, data: bytes, mime_type: str = "audio/wav"
+    ) -> "AudioInput":
+        file_id = str(uuid.uuid4())
+        rec = UploadedFileRec(file_id, name, mime_type, data)
+        urls = FileURLsProto(file_id=file_id, upload_url="", delete_url="")
+        self.root._runner._register_uploaded_file(rec)
+        uploaded = UploadedFile(rec, urls)
+        return self.set_value(uploaded)
+
+    def record(self, path: str | Path) -> "AudioInput":
+        data = Path(path).read_bytes()
+        return self.record_from_bytes(Path(path).name, data)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self._file is not None:
+            fus = FileUploaderStateProto()
+            info = fus.uploaded_file_info.add()
+            info.file_id = self._file.file_id
+            info.name = self._file.name
+            info.size = self._file.size
+            info.file_urls.file_id = self._file.file_id
+            ws.file_uploader_state_value.CopyFrom(fus)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | None:
+        if self._file is not None:
+            return self._file
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
+
+
+@dataclass(repr=False)
+class CameraInput(Widget):
+    """A representation of ``st.camera_input``."""
+
+    _file: UploadedFile | None
+    proto: CameraInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: CameraInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._file = None
+        self.type = "camera_input"
+
+    def set_value(self, f: UploadedFile) -> "CameraInput":
+        self._file = f
+        self.root._runner._register_uploaded_file(
+            UploadedFileRec(f.file_id, f.name, f.type, f.getvalue())
+        )
+        return self
+
+    def capture_from_bytes(
+        self, name: str, data: bytes, mime_type: str = "image/jpeg"
+    ) -> "CameraInput":
+        file_id = str(uuid.uuid4())
+        rec = UploadedFileRec(file_id, name, mime_type, data)
+        urls = FileURLsProto(file_id=file_id, upload_url="", delete_url="")
+        self.root._runner._register_uploaded_file(rec)
+        uploaded = UploadedFile(rec, urls)
+        return self.set_value(uploaded)
+
+    def capture(self, path: str | Path) -> "CameraInput":
+        data = Path(path).read_bytes()
+        return self.capture_from_bytes(Path(path).name, data)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self._file is not None:
+            fus = FileUploaderStateProto()
+            info = fus.uploaded_file_info.add()
+            info.file_id = self._file.file_id
+            info.name = self._file.name
+            info.size = self._file.size
+            info.file_urls.file_id = self._file.file_id
+            ws.file_uploader_state_value.CopyFrom(fus)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | None:
+        if self._file is not None:
+            return self._file
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
+
+
+@dataclass(repr=False)
 class Toast(Element):
     proto: ToastProto = field(repr=False)
     icon: str
@@ -1588,6 +1710,14 @@ class Block:
     @property
     def checkbox(self) -> WidgetList[Checkbox]:
         return WidgetList(self.get("checkbox"))  # type: ignore
+
+    @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        return WidgetList(self.get("audio_input"))  # type: ignore
+
+    @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        return WidgetList(self.get("camera_input"))  # type: ignore
 
     @property
     def code(self) -> ElementList[Code]:
@@ -2118,6 +2248,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = TextInput(elt.text_input, root=root)
             elif ty == "time_input":
                 new_node = TimeInput(elt.time_input, root=root)
+            elif ty == "audio_input":
+                new_node = AudioInput(elt.audio_input, root=root)
+            elif ty == "camera_input":
+                new_node = CameraInput(elt.camera_input, root=root)
             elif ty == "file_uploader":
                 new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "toast":
