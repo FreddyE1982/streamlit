@@ -244,6 +244,11 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs", key="feedback_command_key")
         assert val == session_state_index
 
+    def test_rating_alias(self):
+        st.rating()
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert [o.content_icon for o in delta.options] == [_STAR_ICON] * 5
+
 
 def get_command_matrix(
     test_args: list[Any], with_st_feedback: bool = False

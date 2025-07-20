@@ -489,6 +489,12 @@ class AppTest:
         return self._tree.button_group
 
     @property
+    def rating(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.rating`` widgets."""
+
+        return self._tree.button_group
+
+    @property
     def caption(self) -> ElementList[Caption]:
         """Sequence of all ``st.caption`` elements.
 

@@ -81,6 +81,7 @@ from streamlit.elements.vega_charts import VegaChartsMixin
 from streamlit.elements.widgets.audio_input import AudioInputMixin
 from streamlit.elements.widgets.button import ButtonMixin
 from streamlit.elements.widgets.button_group import ButtonGroupMixin
+from streamlit.elements.widgets.rating import RatingMixin
 from streamlit.elements.widgets.camera_input import CameraInputMixin
 from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
@@ -174,6 +175,7 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     ButtonGroupMixin,
+    RatingMixin,
     CameraInputMixin,
     ChatMixin,
     CheckboxMixin,
