@@ -55,6 +55,9 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRe
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
+from streamlit.proto.DownloadButton_pb2 import (
+    DownloadButton as DownloadButtonProto,
+)
 from streamlit.proto.Common_pb2 import (
     FileURLs as FileURLsProto,
     FileUploaderState as FileUploaderStateProto,
@@ -94,6 +97,9 @@ if TYPE_CHECKING:
     from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
     from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
+    from streamlit.proto.DownloadButton_pb2 import (
+        DownloadButton as DownloadButtonProto,
+    )
     from streamlit.proto.Common_pb2 import (
         FileUploaderState as FileUploaderStateProto,
         FileURLs as FileURLsProto,
@@ -359,6 +365,53 @@ class Button(Widget):
 
     def click(self) -> Button:
         """Set the value of the button to True."""
+        return self.set_value(True)
+
+
+@dataclass(repr=False)
+class DownloadButton(Widget):
+    """A representation of ``st.download_button``."""
+
+    _value: bool
+
+    proto: DownloadButtonProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+    url: str
+    type: str
+    icon: str
+    use_container_width: bool
+    ignore_rerun: bool
+
+    def __init__(self, proto: DownloadButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = False
+        self.type = "download_button"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.trigger_value = self._value
+        return ws
+
+    @property
+    def value(self) -> bool:
+        """The value of the widget. (bool)"""  # noqa: D400
+        if self._value:
+            return self._value
+        state = self.root.session_state
+        assert state
+        return bool(state.get(TESTING_KEY, {}).get(self.id, False))
+
+    def set_value(self, v: bool) -> DownloadButton:
+        """Set the value of the widget."""
+        self._value = v
+        return self
+
+    def click(self) -> DownloadButton:
+        """Set the value of the widget to True."""
         return self.set_value(True)
 
 
@@ -1744,6 +1797,10 @@ class Block:
         return ElementList(self.get("divider"))  # type: ignore
 
     @property
+    def download_button(self) -> WidgetList[DownloadButton]:
+        return WidgetList(self.get("download_button"))  # type: ignore
+
+    @property
     def error(self) -> ElementList[Error]:
         return ElementList(self.get("error"))  # type: ignore
 
@@ -2183,6 +2240,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Button(elt.button, root=root)
             elif ty == "button_group":
                 new_node = ButtonGroup(elt.button_group, root=root)
+            elif ty == "download_button":
+                new_node = DownloadButton(elt.download_button, root=root)
             elif ty == "chat_input":
                 new_node = ChatInput(elt.chat_input, root=root)
             elif ty == "checkbox":
