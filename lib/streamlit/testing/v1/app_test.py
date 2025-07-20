@@ -72,6 +72,9 @@ from streamlit.testing.v1.element_tree import (
     Subheader,
     Success,
     Tab,
+    AudioInput,
+    CameraInput,
+    FileUploader,
     Table,
     Text,
     TextArea,
@@ -513,6 +516,18 @@ class AppTest:
         return self._tree.chat_input
 
     @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        """Sequence of all ``st.audio_input`` widgets."""
+
+        return self._tree.audio_input
+
+    @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        """Sequence of all ``st.camera_input`` widgets."""
+
+        return self._tree.camera_input
+
+    @property
     def chat_message(self) -> Sequence[ChatMessage]:
         """Sequence of all ``st.chat_message`` elements.
 
@@ -668,6 +683,12 @@ class AppTest:
             extension of the Block class.
         """
         return self._tree.expander
+
+    @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        """Sequence of all ``st.file_uploader`` widgets."""
+
+        return self._tree.file_uploader
 
     @property
     def header(self) -> ElementList[Header]:
